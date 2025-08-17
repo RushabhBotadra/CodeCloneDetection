@@ -1,3 +1,5 @@
+#Model Evaluation
+
 import pandas as pd
 import re
 import torch
@@ -21,6 +23,7 @@ torch.backends.cudnn.benchmark = False
 # Pre-process Code
 def preprocess_code(code, language):
     try:
+# Step 1: Pre-processing
         if language == 'py':
             code = re.sub(r'#.*?\n', '\n', code)
             code = re.sub(r'\'\'\'.*?\'\'\'|\"\"\".*?\"\"\"', '', code, flags=re.DOTALL)
@@ -30,7 +33,7 @@ def preprocess_code(code, language):
             code = re.sub(r'///?.*?\n', '\n', code)
             code = re.sub(r'/\*.*?\*/', '', code, flags=re.DOTALL)
 
-        # code = re.sub(r'[{}();:,\[\]]', ' ', code)
+# Step 2: Whitespace Normalization
         code = ' '.join(code.split()).strip()
 
         return code if code else ""
@@ -68,6 +71,7 @@ class CloneDataset(Dataset):
             'labels': torch.tensor(self.labels[idx], dtype=torch.long)
         }
 
+#Evaluate the Models
 def evaluate_model_cosine(model, test_loader, device, df_test, model_name, threshold=0.7):
     model.eval()
     preds, labels, probs = [], [], []
@@ -83,16 +87,13 @@ def evaluate_model_cosine(model, test_loader, device, df_test, model_name, thres
             batch_labels = batch['labels'].to(device)
 
             if is_codet5:
-                # output1 = model.encoder(input_ids=input_ids1, attention_mask=attention_mask1).last_hidden_state[:, 0, :]
-                # output2 = model.encoder(input_ids=input_ids2, attention_mask=attention_mask2).last_hidden_state[:, 0, :]
                 output1 = model.encoder(input_ids=input_ids1, attention_mask=attention_mask1).last_hidden_state.mean(1)
                 output2 = model.encoder(input_ids=input_ids2, attention_mask=attention_mask2).last_hidden_state.mean(1)
             else:
-                # output1 = model(input_ids1, attention_mask=attention_mask1).last_hidden_state[:, 0, :]
-                # output2 = model(input_ids2, attention_mask=attention_mask2).last_hidden_state[:, 0, :]
                 output1 = model(input_ids=input_ids1, attention_mask=attention_mask1).last_hidden_state.mean(1)
                 output2 = model(input_ids=input_ids2, attention_mask=attention_mask2).last_hidden_state.mean(1)
 
+#Cosine Similarity
             sim_scores = torch.nn.functional.cosine_similarity(output1, output2, dim=1)
             prob_scores = sim_scores.cpu().numpy()
             predictions = (sim_scores > threshold).long().cpu().numpy()
@@ -116,6 +117,7 @@ def evaluate_model_cosine(model, test_loader, device, df_test, model_name, thres
 
     return precision, recall, f1, TN, FP, FN, TP, preds, labels, cm
 
+#Analyse the performance
 def analyze_performance_by_language(df_test, preds, labels):
     df_test = df_test.copy().reset_index(drop=True)
     df_test['prediction'] = preds
@@ -143,9 +145,11 @@ def analyze_performance_by_language(df_test, preds, labels):
 
     return metrics
 
+#Load the dataset
 df = pd.read_csv("clone_dataset.csv")
 df_preprocessed = preprocess_dataset(df)
 
+#Initialize the models
 models = [
     { 
         'name': 'CodeBERT', 
