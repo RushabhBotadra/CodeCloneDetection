@@ -18,6 +18,7 @@ torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
+# Pre-process Code
 def preprocess_code(code, language):
     try:
         if language == 'py':
@@ -37,6 +38,7 @@ def preprocess_code(code, language):
         print(f"Error preprocessing code: {e}")
         return ""
 
+# Pre-process Dataset
 def preprocess_dataset(df):
     df_processed = df.copy()
     df_processed['clone1'] = df_processed.apply(lambda row: preprocess_code(row['clone1'], row['language']), axis=1)
@@ -108,7 +110,7 @@ def evaluate_model_cosine(model, test_loader, device, df_test, model_name, thres
     df_output['probability'] = probs
     df_output['correct'] = df_output['prediction'] == df_output['is_semantic_clone']
 
-    output_filename = f"{model_name}_results_cosine_2_U.xlsx"
+    output_filename = f"{model_name}_results.xlsx"
     df_output.to_excel(output_filename, index=False)
     print(f"Saved detailed results to {output_filename}")
 
@@ -141,7 +143,6 @@ def analyze_performance_by_language(df_test, preds, labels):
 
     return metrics
 
-# df = pd.read_csv("/home/rushabh.botadra/ModelEvaluation/clone_dataset_final_with_cs.csv")
 df = pd.read_csv("clone_dataset.csv")
 df_preprocessed = preprocess_dataset(df)
 
